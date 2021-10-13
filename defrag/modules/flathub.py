@@ -1,4 +1,7 @@
-from typing import List, Optional
+from lunr import lunr
+from lunr.index import Index
+
+from typing import Any, List, Optional
 from pydantic.main import BaseModel
 from defrag.modules.helpers.requests import Req
 from defrag.modules.helpers import Query, QueryResponse
@@ -19,6 +22,7 @@ categories = [
     "System",
     "Utility"
 ]
+index = None
 
 
 class FlatHubEntry(BaseModel):
@@ -32,16 +36,34 @@ class FlatHubEntry(BaseModel):
     inStoreSinceDate: Optional[str]
 
 
-async def list_apps(category: Optional[str]) -> List[FlatHubEntry]:
-    url = f"{base_url}/category/{category}" if (
-        category and category in categories) else base_url
+def make_index(items: List[FlatHubEntry]) -> Index:
+    documents = [i.dict() for i in items]
+    return lunr(ref="flatpakAppId", fields=("name", "summary"), documents=documents)
+
+
+async def list_apps(category: Optional[str] = None) -> List[FlatHubEntry]:
+    url = f"{base_url}/category/{category}" if category in categories else base_url
     async with Req(url) as response:
         res = await response.json()
         return [FlatHubEntry(**v) for v in res] if res else []
 
 
+async def search(keywords: str) -> List[str]:
+    global index
+    if not index:
+        index = make_index(await list_apps())
+    return [item["ref"] for item in index.search(keywords)]
+
+
 @app.get(f"/{__MOD_NAME__}/apps")
-async def get_all_apps(category: Optional[str] = None) -> QueryResponse:
+async def get_apps(category: Optional[str] = None) -> QueryResponse:
     query = Query(service=__MOD_NAME__)
     results = await list_apps(category)
+    return QueryResponse(query=query, results=results, results_count=len(results))
+
+
+@app.get(f"/{__MOD_NAME__}/apps/search")
+async def search_apps(keywords: str) -> QueryResponse:
+    query = Query(service=__MOD_NAME__)
+    results = await search(keywords)
     return QueryResponse(query=query, results=results, results_count=len(results))
