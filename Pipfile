@@ -31,6 +31,7 @@ atoma = "*"
 beautifulsoup4 = "*"
 python-bugzilla = "*"
 aiohttp = "*"
+pytest-asyncio = "*"
 
 [dev-packages]
 autopep8 = "*"
