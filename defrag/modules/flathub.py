@@ -1,7 +1,7 @@
 from lunr import lunr
 from lunr.index import Index
 
-from typing import Any, List, Optional
+from typing import List, Optional
 from pydantic.main import BaseModel
 from defrag.modules.helpers.requests import Req
 from defrag.modules.helpers import Query, QueryResponse
